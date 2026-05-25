@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canudo - Gerador de Certificados</title>
+    <!-- Importação da fonte cursiva para a assinatura dinâmica -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400..700&display=swap" rel="stylesheet">
+    <style>
+        /* --- ESTILOS DO PAINEL (O que você vê no celular) --- */
+        body { font-family: sans-serif; background-color: #121212; color: #ffffff; padding: 15px; margin: 0; }
+        main { max-width: 700px; margin: 0 auto; }
+        header { border-bottom: 2px solid #333; margin-bottom: 20px; padding-bottom: 10px; }
+        h1 { font-size: 1.8rem; margin: 0; color: #00ffcc; }
+        .secao { background: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #333; }
+        .secao h2 { margin-top: 0; font-size: 1.2rem; color: #ffaa00; }
+        label { display: block; font-weight: bold; margin-top: 12px; margin-bottom: 6px; }
+        input[type="text"], textarea, select { width: 100%; background-color: #2a2a2a; color: #ffffff; border: 2px solid #444; border-radius: 6px; padding: 12px; box-sizing: border-box; font-size: 1rem; }
+        input:focus, textarea:focus, select:focus, button:focus { outline: 3px solid #00ffcc; }
+        textarea { height: 100px; resize: vertical; }
+        
+        .lista-alunos { list-style: none; padding: 0; margin: 15px 0; }
+        .item-aluno { background: #2a2a2a; padding: 12px; margin-bottom: 10px; border-radius: 6px; border-left: 5px solid #00ffcc; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .info-aluno { font-weight: bold; }
+        .btn-emitir { background: #00ffcc; color: #000; font-weight: bold; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; width: auto; }
+        
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+
+        /* --- ESTILOS DO CERTIFICADO (O que vai para o PDF) --- */
+        @media print {
+            body { background: #fff !important; color: #000 !important; padding: 0; }
+            main, .secao, button, header, .sr-only { display: none !important; }
+            #area-impressao { display: block !important; }
+            
+            /* Página 1: Frente do Certificado */
+            .certificado-frente {
+                page-break-after: always;
+                break-after: page;
+                box-sizing: border-box;
+                border: 15px double #8d6e63;
+                padding: 40px;
+                height: 100vh;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                text-align: center;
+                font-family: 'Georgia', serif;
+            }
+            .cert-titulo { font-size: 3rem; font-weight: bold; color: #5d4037; margin-top: 20px; text-transform: uppercase; letter-spacing: 2px; }
+            .cert-texto { font-size: 1.4rem; line-height: 1.8; margin: 40px auto; max-width: 80%; }
+            .cert-nome-aluno { font-size: 2.2rem; font-weight: bold; color: #000; border-bottom: 2px solid #5d4037; display: inline-block; padding-bottom: 5px; margin: 10px 0; }
+            
+            .cert-rodape { display: flex; justify-content: center; align-items: center; flex-direction: column; margin-bottom: 30px; }
+            .cert-assinatura-texto { font-family: 'Caveat', cursive; font-size: 2.5rem; color: #111; margin-bottom: -5px; padding: 0 20px; }
+            .cert-linha { width: 250px; border-bottom: 1px solid #000; margin-bottom: 5px; }
+            .cert-instrutor { font-size: 1.1rem; font-weight: bold; }
+
+            /* Página 2: Verso (Conteúdo Programático) */
+            .certificado-verso {
+                page-break-after: always;
+                break-after: page;
+                box-sizing: border-box;
+                padding: 50px;
+                height: 100vh;
+                font-family: 'Arial', sans-serif;
+                line-height: 1.5;
+            }
+            .verso-titulo { text-align: center; font-size: 1.5rem; font-weight: bold; text-transform: uppercase; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+            .verso-conteudo { font-size: 1.1rem; white-space: pre-line; background: #fafafa; padding: 20px; border: 1px solid #ccc; border-radius: 4px; }
+            .verso-metadados { margin-top: 40px; font-size: 1rem; color: #444; border-top: 1px solid #ddd; padding-top: 15px; }
+        }
+        #area-impressao { display: none; }
+    </style>
+</head>
+<body>
+
+    <main>
+        <header>
+            <h1>Canudo</h1>
+            <p style="font-size: 0.9rem; color: #aaa; margin: 5px 0 0 0;">
+                Gerador Portátil de Certificados • Desenvolvido por <strong>Anderson Carvalho</strong>
+            </p>
+        </header>
+
+        <!-- Região Live para leitores de tela -->
+        <div id="alerta-acessivel" class="sr-only" aria-live="assertive"></div>
+
+        <!-- 1. DADOS DO CURSO -->
+        <div class="secao">
+            <h2>1. Informações do Curso</h2>
+            
+            <label for="curso-nome">Nome do Curso:</label>
+            <input type="text" id="curso-nome" placeholder="Ex: Curso de Capacitação em Tecnologia">
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div>
+                    <label for="curso-horas">Carga Horária (Horas):</label>
+                    <input type="text" id="curso-horas" placeholder="Ex: 20 horas">
+                </div>
+                <div>
+                    <label for="curso-periodo">Período / Data de Conclusão:</label>
+                    <input type="text" id="curso-periodo" placeholder="Ex: Junho de 2026">
+                </div>
+            </div>
+
+            <label for="curso-instrutor">Nome do Instrutor / Emissor:</label>
+            <input type="text" id="curso-instrutor" placeholder="Nome de quem assina o documento">
+
+            <label for="curso-conteudo">Conteúdo Programático (Um por linha):</label>
+            <textarea id="curso-conteudo" placeholder="Tópico 1&#10;Tópico 2&#10;Tópico 3"></textarea>
+        </div>
+
+        <!-- 2. LISTA DE ALUNOS -->
+        <div class="secao">
+            <h2>2. Lista de Alunos</h2>
+            <p style="font-size: 0.9rem; color: #ccc; margin-bottom: 10px;">
+                Cole a lista de estudantes abaixo. Digite **um aluno por linha** seguindo o padrão: `Nome do Aluno - Documento`.
+            </p>
+            <textarea id="lista-entrada-alunos" style="height: 120px;" placeholder="Nome do Aluno Exemplo - CPF 000.000.000-00"></textarea>
+            <button id="btn-processar-alunos" style="margin-top: 10px; font-weight: bold;">Carregar Alunos na Mesa</button>
+        </div>
+
+        <!-- 3. MESA DE EMISSÃO -->
+        <div class="secao">
+            <h2 id="titulo-mesa">3. Mesa de Emissão Individual</h2>
+            <p style="font-size: 0.9rem; color: #ccc; margin-bottom: 15px;">Clique no botão do aluno desejado para abrir a fila de impressão do PDF:</p>
+            <ul id="lista-painel-alunos" class="lista-alunos" aria-labelledby="titulo-mesa">
+                <li style="color:#aaa;">Nenhum aluno carregado ainda.</li>
+            </ul>
+        </div>
+    </main>
+
+    <div id="area-impressao"></div>
+
+    <script>
+        let baseAlunos = [];
+
+        const cursoNome = document.getElementById('curso-nome');
+        const cursoHoras = document.getElementById('curso-horas');
+        const cursoPeriodo = document.getElementById('curso-periodo');
+        const cursoInstrutor = document.getElementById('curso-instrutor');
+        const cursoConteudo = document.getElementById('curso-conteudo');
+        const listaEntradaAlunos = document.getElementById('lista-entrada-alunos');
+        const listaPainelAlunos = document.getElementById('lista-painel-alunos');
+        const btnProcessarAlunos = document.getElementById('btn-processar-alunos');
+        const areaImpressao = document.getElementById('area-impressao');
+        const alertaAcessivel = document.getElementById('alerta-acessivel');
+
+        function anunciarLeitor(msg) {
+            alertaAcessivel.textContent = msg;
+            setTimeout(() => { alertaAcessivel.textContent = ''; }, 3000);
+        }
+
+        // Armazenamento local preventivo
+        window.addEventListener('load', () => {
+            if (localStorage.getItem('canudo_nome')) cursoNome.value = localStorage.getItem('canudo_nome');
+            if (localStorage.getItem('canudo_horas')) cursoHoras.value = localStorage.getItem('canudo_horas');
+            if (localStorage.getItem('canudo_periodo')) cursoPeriodo.value = localStorage.getItem('canudo_periodo');
+            if (localStorage.getItem('canudo_instrutor')) cursoInstrutor.value = localStorage.getItem('canudo_instrutor');
+            if (localStorage.getItem('canudo_conteudo')) cursoConteudo.value = localStorage.getItem('canudo_conteudo');
+            if (localStorage.getItem('canudo_lista')) listaEntradaAlunos.value = localStorage.getItem('canudo_lista');
+            
+            if (listaEntradaAlunos.value.trim() !== '') {
+                processarListaAlunos(true);
+            }
+        });
+
+        const camposSalvar = [cursoNome, cursoHoras, cursoPeriodo, cursoInstrutor, cursoConteudo, listaEntradaAlunos];
+        camposSalvar.forEach(campo => {
+            campo.addEventListener('input', () => {
+                localStorage.setItem('canudo_nome', cursoNome.value);
+                localStorage.setItem('canudo_horas', cursoHoras.value);
+                localStorage.setItem('canudo_periodo', cursoPeriodo.value);
+                localStorage.setItem('canudo_instrutor', cursoInstrutor.value);
+                localStorage.setItem('canudo_conteudo', cursoConteudo.value);
+                localStorage.setItem('canudo_lista', listaEntradaAlunos.value);
+            });
+        });
+
+        btnProcessarAlunos.addEventListener('click', () => {
+            processarListaAlunos(false);
+        });
+
+        function processarListaAlunos(silencioso) {
+            const texto = listaEntradaAlunos.value.trim();
+            if (!texto) {
+                if(!silencioso) anunciarLeitor("A lista de alunos está vazia.");
+                return;
+            }
+
+            baseAlunos = [];
+            const linhas = texto.split('\n');
+
+            linhas.forEach(linha => {
+                if (linha.trim() === '') return;
+                
+                let partes = linha.split('-');
+                let nome = partes[0] ? partes[0].trim() : "Estudante";
+                let documento = partes[1] ? partes[1].trim() : "";
+
+                baseAlunos.push({
+                    id: crypto.randomUUID(),
+                    nome: nome,
+                    documento: documento
+                });
+            });
+
+            renderizarMesaEmissao();
+            if(!silencioso) anunciarLeitor(`${baseAlunos.length} registros processados.`);
+        }
+
+        function renderizarMesaEmissao() {
+            listaPainelAlunos.innerHTML = '';
+
+            if (baseAlunos.length === 0) {
+                listaPainelAlunos.innerHTML = '<li style="color:#aaa;">Nenhum aluno carregado ainda.</li>';
+                return;
+            }
+
+            baseAlunos.forEach((aluno) => {
+                const li = document.createElement('li');
+                li.className = 'item-aluno';
+                
+                li.innerHTML = `
+                    <span class="info-aluno" id="lbl-${aluno.id}">${aluno.nome} <span style="font-size:0.85rem; color:#aaa;">${aluno.documento}</span></span>
+                    <button class="btn-emitir" onclick="imprimirCertificadoIndividual('${aluno.id}')" aria-describedby="lbl-${aluno.id}">Emitir PDF</button>
+                `;
+                listaPainelAlunos.appendChild(li);
+            });
+        }
+
+        window.imprimirCertificadoIndividual = function(idAlvo) {
+            const aluno = baseAlunos.find(a => a.id === idAlvo);
+            if (!aluno) return;
+
+            if (!cursoNome.value || !cursoInstrutor.value) {
+                alert("Por favor, preencha os dados obrigatórios do curso e do instrutor antes de emitir.");
+                return;
+            }
+
+            let htmlFrente = `
+                <div class="certificado-frente">
+                    <div class="cert-titulo">Certificado de Conclusão</div>
+                    <div class="cert-texto">
+                        Certificamos para os devidos fins que<br>
+                        <span class="cert-nome-aluno">${aluno.nome}</span><br>
+                        ${aluno.documento ? `portador(a) do documento ${aluno.documento},<br>` : ''}
+                        concluiu com êxito as atividades do curso de <strong>${cursoNome.value}</strong>,<br>
+                        ministrado por <strong>${cursoInstrutor.value}</strong>,<br>
+                        com carga horária de <strong>${cursoHoras.value || 'N/A'}</strong> e conclusão em <strong>${cursoPeriodo.value || 'N/A'}</strong>.
+                    </div>
+                    <div class="cert-rodape">
+                        <div class="cert-assinatura-texto">${cursoInstrutor.value}</div>
+                        <div class="cert-linha"></div>
+                        <div class="cert-instrutor">${cursoInstrutor.value}</div>
+                        <div style="font-size: 0.85rem; color: #555;">Instrutor Responsável</div>
+                    </div>
+                </div>
+            `;
+
+            let htmlVerso = `
+                <div class="certificado-verso">
+                    <div class="verso-titulo">Conteúdo Programático</div>
+                    <div class="verso-conteudo">${cursoConteudo.value || 'O conteúdo programático não foi especificado.'}</div>
+                    <div class="verso-metadados">
+                        <strong>Emitido por:</strong> ${cursoInstrutor.value}<br>
+                        <strong>Natureza do Curso:</strong> Curso Livre de Capacitação e Atualização Profissional<br>
+                        <strong>Amparo Legal:</strong> Lei nº 9.394/96 (LDB) Art. 42 e Decreto Presidencial nº 5.154/04.<br>
+                        <span style="font-size:0.85rem; color:#666;">Chave de Autenticidade: ${crypto.randomUUID().substring(0,8).toUpperCase()}</span>
+                    </div>
+                </div>
+            `;
+
+            areaImpressao.innerHTML = htmlFrente + htmlVerso;
+            window.print();
+        };
+    </script>
+</body>
+</html>
